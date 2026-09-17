@@ -1,0 +1,76 @@
+
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #1c1c1e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .calc {
+    background: #000;
+    width: 290px;
+    padding: 14px;
+    border-radius: 32px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+  }
+  .display {
+    padding: 14px 18px 8px;
+    text-align: right;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .main {
+    font-size: 56px;
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preview {
+    font-size: 22px;
+    font-weight: 300;
+    color: #8e8e93;
+    min-height: 28px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 10px 4px;
+  }
+  button {
+    border: none;
+    height: 62px;
+    font-size: 26px;
+    font-weight: 400;
+    color: #fff;
+    background: #333335;
+    border-radius: 50%;
+    cursor: pointer;
+    outline: none;
+    transition: filter 80ms  ease, transform 60ms ease;
+    user-select: none;
+  }
+  button.gray   { background: #a5a5ad; color: #000; }
+  button.orange { background: #ff9500; color: #fff; }
+  button.wide {
+    grid-column: span 2;
+    border-radius: 34px;
+    text-align: left;
+    padding-left: 26px;
+  }
+  button:hover  { filter: brightness(1.15); }
+  button:active { filter: brightness(1.35); transform: scale(0.97); }

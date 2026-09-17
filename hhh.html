@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="so">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculator UI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #4a3878 0%, #2a1a4a 70%, #1a0f33 100%);
+    font-family: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
+    padding: 20px;
+  }
+
+  .calculator {
+    width: 320px;
+    background: #fff;
+    border-radius: 30px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    min-height: 580px;
+  }
+
+  .display {
+    position: relative;
+    padding: 25px;
+    flex: 1;
+    background: linear-gradient(180deg, #ece9f5 0%, #d8d3ec 100%);
+    overflow: hidden;
+  }
+
+  .mode-btn {
+    display: inline-block;
+    padding: 6px 16px;
+    border: 1px solid #2a1a4a;
+    border-radius: 20px;
+    color: #2a1a4a;
+    font-size: 12px;
+    font-weight: 400;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .mode-btn:hover { background: #2a1a4a; color: #fff; }
+
+  .calculation {
+    margin-top: 25px;
+    text-align: right;
+    font-size: 32px;
+    font-weight: 200;
+    color: #2a1a4a;
+    line-height: 1.1;
+    letter-spacing: 1px;
+    word-break: break-all;
+    min-height: 130px;
+  }
+
+  .wave {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    z-index: 1;
+  }
+
+  .keypad {
+    position: relative;
+    background: #554784;
+    padding: 30px 25px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 18px 22px;
+    z-index: 2;
+    min-height: 380px;
+  }
+
+  .btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 300;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.15s, transform 0.05s;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+  }
+  .btn:hover { background: rgba(255,255,255,0.1); }
+  .btn:active { transform: scale(0.96); background: rgba(255,255,255,0.18); }
+
+  .btn.ac { color: #ff7a6b; }
+  .btn.backspace svg { width: 22px; height: 22px; stroke: #fff; }
+
+  .equals {
+    grid-row: span 2;
+    grid-column: 4;
+    background: #3d2f5e !important;
+    color: #fff;
+    font-size: 32px;
+    font-weight: 300;
+    border-radius: 10px;
+    height: auto;
+    align-self: stretch;
+  }
+  .equals:hover { background: #4a3a72 !important; }
+
+  .credit {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #8a7cb5;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="display">
+      <button class="mode-btn">mode</button>
+      <div class="calculation" id="calc">20<br>+<br>80<br>=100</div>
+    </div>
+
+    <div class="keypad">
+      <button class="btn ac" data-action="clear">AC</button>
+      <button class="btn backspace" data-action="back">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="9 4 4 12 9 20 21 20 21 4 9 4"></polygon>
+          <line x1="12" y1="9" x2="18" y2="9"></line>
+          <line x1="12" y1="13" x2="18" y2="13"></line>
+          <line x1="12" y1="17" x2="15" y2="17"></line>
+        </svg>
+      </button>
+      <button class="btn" data-action="op" data-op="÷">÷</button>
+      <button class="btn" data-action="op" data-op="×">×</button>
+
+      <button class="btn" data-num="7">7</button>
+      <button class="btn" data-num="8">8</button>
+      <button class="btn" data-num="9">9</button>
+      <button class="btn" data-action="op" data-op="−">−</button>
+
+      <button class="btn" data-num="4">4</button>
+      <button class="btn" data-num="5">5</button>
+      <button class="btn" data-num="6">6</button>
+      <button class="btn" data-action="op" data-op="+">+</button>
+
+      <button class="btn" data-num="1">1</button>
+      <button class="btn" data-num="2">2</button>
+      <button class="btn" data-num="3">3</button>
+      <button class="equals" data-action="equals">=</button>
+
+      <button class="btn" data-action="percent">%</button>
+      <button class="btn" data-num="0">0</button>
+      <button class="btn" data-num=".">.</button>
+    </div>
+  </div>
+  <div class="credit">behance.net/heregoes</div>
+
+<script>
+  const display = document.getElementById('calc');
+  let current = '';
+  let operator = null;
+  let previous = null;
+  let justEvaluated = false;
+  let expression = '';
+
+  function updateDisplay() {
+    display.innerHTML = expression.replace(/\n/g, '<br>');
+    display.scrollTop = display.scrollHeight;
+  }
+
+  function compute(a, op, b) {
+    a = parseFloat(a); b = parseFloat(b);
+    if (isNaN(a) || isNaN(b)) return '';
+    switch(op) {
+      case '+': return (a + b).toString();
+      case '−': return (a - b).toString();
+      case '×': return (a * b).toString();
+      case '÷': return b === 0 ? 'Error' : (a / b).toString();
+      default: return '';
+    }
+  }
+
+  document.querySelectorAll('.btn, .equals').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+
+      if (action === 'clear') {
+        current = ''; operator = null; previous = null;
+        expression = ''; justEvaluated = false;
+        updateDisplay();
+        return;
+      }
+
+      if (action === 'back') {
+        if (justEvaluated) { expression = ''; justEvaluated = false; }
+        const lines = expression.split('\n');
+        const last = lines.pop();
+        lines.push(last.slice(0, -1));
+        expression = lines.join('\n');
+        current = current.slice(0, -1);
+        updateDisplay();
+        return;
+      }
+
+      if (action === 'percent') {
+        if (current) {
+          current = (parseFloat(current) / 100).toString();
+          expression = expression.replace(/(\d+\.?\d*)$/, current);
+          updateDisplay();
+        }
+        return;
+      }
+
+      if (btn.dataset.num !== undefined) {
+        const num = btn.dataset.num;
+        if (justEvaluated) { expression = ''; justEvaluated = false; current = ''; }
+        if (current === '0' && num !== '.') current = num;
+        else current += num;
+        expression = (expression.match(/\n?$/)[0] === '' && /\d$/.test(expression))
+          ? expression + num
+          : expression + num;
+        if (/[+\-×÷]$/.test(expression) && !/[+\-×÷]$/.test(expression.slice(0, -1))) {
+          // ok
+        }
+        rebuildExpression();
+        return;
+      }
+
+      if (action === 'op') {
+        const op = btn.dataset.op;
+        if (justEvaluated) { justEvaluated = false; }
+        if (current === '' && expression === '') return;
+        if (operator && /\n$/.test(expression)) {
+          expression = expression.slice(0, -1) + op;
+          operator = op;
+          updateDisplay();
+          return;
+        }
+        if (operator && current) {
+          const result = compute(previous, operator, current);
+          expression = result + '\n' + op;
+          previous = result; current = '';
+          operator = op;
+          updateDisplay();
+          return;
+        }
+        previous = current;
+        operator = op;
+        expression += '\n' + op;
+        current = '';
+        updateDisplay();
+        return;
+      }
+
+      if (action === 'equals') {
+        if (operator && previous !== null && current) {
+          const result = compute(previous, operator, current);
+          expression += '\n=' + result;
+          previous = result; current = '';
+          operator = null;
+          justEvaluated = true;
+          updateDisplay();
+        }
+        return;
+      }
+    });
+  });
+
+  function rebuildExpression() {
+    const lines = expression.split('\n');
+    let last = lines[lines.length - 1] || '';
+    if (lines.length === 1) {
+      expression = current;
+    } else {
+      lines[lines.length - 1] = current;
+      expression = lines.join('\n');
+    }
+    updateDisplay();
+  }
+
+  document.querySelector('.mode-btn').addEventListener('click', () => {
+    document.body.classList.toggle('light');
+    document.querySelector('.mode-btn').textContent =
+      document.body.classList.contains('light') ? 'mode' : 'mode';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Calculator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #1c1c1e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .calc {
+    background: #000;
+    width: 290px;
+    padding: 14px;
+    border-radius: 32px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+  }
+  .display {
+    padding: 14px 18px 8px;
+    text-align: right;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .main {
+    font-size: 56px;
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preview {
+    font-size: 22px;
+    font-weight: 300;
+    color: #8e8e93;
+    min-height: 28px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 10px 4px;
+  }
+  button {
+    border: none;
+    height: 62px;
+    font-size: 26px;
+    font-weight: 400;
+    color: #fff;
+    background: #333335;
+    border-radius: 50%;
+    cursor: pointer;
+    outline: none;
+    transition: filter 80ms ease, transform 60ms ease;
+    user-select: none;
+  }
+  button.gray   { background: #a5a5ad; color: #000; }
+  button.orange { background: #ff9500; color: #fff; }
+  button.wide {
+    grid-column: span 2;
+    border-radius: 34px;
+    text-align: left;
+    padding-left: 26px;
+  }
+  button:hover  { filter: brightness(1.15); }
+  button:active { filter: brightness(1.35); transform: scale(0.97); }
+</style>
+</head>
+<body>
+<div class="calc">
+  <div class="display">
+    <div class="main" id="main">0</div>
+    <div class="preview" id="preview"></div>
+  </div>
+  <div class="keys">
+    <button class="gray"   data-key="AC">AC</button>
+    <button class="gray"   data-key="+/-">+/-</button>
+    <button class="gray"   data-key="%">%</button>
+    <button class="orange" data-key="÷">÷</button>
+
+    <button data-key="7">7</button>
+    <button data-key="8">8</button>
+    <button data-key="9">9</button>
+    <button class="orange" data-key="×">×</button>
+
+    <button data-key="4">4</button>
+    <button data-key="5">5</button>
+    <button data-key="6">6</button>
+    <button class="orange" data-key="−">−</button>
+
+    <button data-key="1">1</button>
+    <button data-key="2">2</button>
+    <button data-key="3">3</button>
+    <button class="orange" data-key="+">+</button>
+
+    <button class="wide"  data-key="0">0</button>
+    <button             data-key=".">.</button>
+    <button class="orange" data-key="=">=</button>
+  </div>
+</div>
+
+<script>
+  const mainEl    = document.getElementById('main');
+  const previewEl = document.getElementById('preview');
+
+  let expr = '';
+  let justEvaluated = false;
+
+  /* ---------- safe expression evaluator (no eval) ---------- */
+  function safeEvaluate(exprStr) {
+    if (!exprStr || exprStr.trim() === '') return null;
+    const clean = exprStr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+
+    const tokens = [];
+    let i = 0;
+    while (i < clean.length) {
+      const c = clean[i];
+      if (c === ' ') { i++; continue; }
+      if (/[0-9.]/.test(c)) {
+        let num = '';
+        while (i < clean.length && /[0-9.]/.test(clean[i])) { num += clean[i]; i++; }
+        if (num.split('.').length > 2) return null;
+        tokens.push({ type: 'num', value: parseFloat(num) });
+      } else if ('+-*/%'.includes(c)) {
+        tokens.push({ type: 'op', value: c });
+        i++;
+      } else {
+        return null;
+      }
+    }
+    if (tokens.length === 0) return null;
+
+    if (tokens[tokens.length - 1].type === 'op') return null;
+
+    for (let j = 0; j < tokens.length; j++) {
+      if (tokens[j].type === 'op' && tokens[j].value === '%') {
+        const rightTok = j - 1 >= 0 ? tokens[j - 1] : null;
+        if (!rightTok || rightTok.type !== 'num') return null;
+
+        let baseValue = 0;
+        if (j >= 2 && tokens[j - 2].type === 'op' &&
+            (tokens[j - 2].value === '+' || tokens[j - 2].value === '-') &&
+            j - 3 >= 0 && tokens[j - 3].type === 'num') {
+          baseValue = tokens[j - 3].value;
+          const px = baseValue * rightTok.value / 100;
+          tokens[j - 1] = { type: 'num', value: px };
+        } else {
+          tokens[j - 1] = { type: 'num', value: rightTok.value / 100 };
+        }
+        tokens.splice(j, 1);
+        j--;
+      }
+    }
+
+    for (let j = 0; j < tokens.length; j++) {
+      if (tokens[j].type === 'op' && (tokens[j].value === '*' || tokens[j].value === '/')) {
+        if (j === 0 || !tokens[j + 1] || tokens[j + 1].type !== 'num') return null;
+        const a = tokens[j - 1].value;
+        const b = tokens[j + 1].value;
+        let r;
+        if (tokens[j].value === '*') r = a * b;
+        else {
+          if (b === 0) return null;
+          r = a / b;
+        }
+        tokens.splice(j - 1, 3, { type: 'num', value: r });
+        j--;
+      }
+    }
+
+    let result = tokens[0].value;
+    for (let j = 1; j < tokens.length; j += 2) {
+      const op = tokens[j].value;
+      const rightVal = tokens[j + 1].value;
+      if (op === '+') result = result + rightVal;
+      else              result = result - rightVal;
+    }
+
+    if (!isFinite(result)) return null;
+    return result;
+  }
+
+  function formatNumber(n) {
+    if (!isFinite(n)) return '';
+    const rounded = Math.round(n * 1e10) / 1e10;
+    let s = rounded.toString();
+    if (s.length > 12) s = rounded.toPrecision(10);
+    return s.replace(/\.?0+$/, '') || '0';
+  }
+
+  function render() {
+    mainEl.textContent = expr === '' ? '0' : expr;
+    const p = safeEvaluate(expr);
+    previewEl.textContent = (p === null) ? '' : formatNumber(p);
+  }
+
+  function lastNumber() {
+    const m = expr.match(/(-?\d+\.?\d*)$/);
+    return m ? { full: m[0], abs: Math.abs(parseFloat(m[0])), sign: m[0].startsWith('-') } : null;
+  }
+
+  function press(key) {
+    if (key === 'AC') {
+      expr = '';
+      justEvaluated = false;
+    } else if (key === '+/-') {
+      const m = expr.match(/(\d+\.?\d*)$/);
+      if (m) {
+        const numStr = m[1];
+        const idx = expr.lastIndexOf(numStr);
+        const num = parseFloat(numStr);
+        const toggled = (num === 0) ? numStr : (numStr.startsWith('-') ? numStr.slice(1) : '-' + numStr);
+        expr = expr.slice(0, idx) + toggled;
+      }
+    } else if (key === '%') {
+      expr += '%';
+      justEvaluated = false;
+    } else if (/[0-9]/.test(key)) {
+      if (justEvaluated) { expr = key; justEvaluated = false; }
+      else expr += key;
+    } else if (key === '.') {
+      const ln = lastNumber();
+      if (ln && ln.full.includes('.')) return;
+      if (!ln) expr += '0.';
+      else expr += '.';
+      justEvaluated = false;
+    } else if ('+-×÷−'.includes(key)) {
+      if (expr === '' && key === '-') expr = '-';
+      else if (expr === '-') return;
+      else if (expr !== '' && '+-×÷−'.includes(expr[expr.length - 1])) {
+        expr = expr.slice(0, -1) + key;
+      } else {
+        expr += key;
+      }
+      justEvaluated = false;
+    } else if (key === '=') {
+      const v = safeEvaluate(expr);
+      if (v !== null) {
+        expr = formatNumber(v);
+        previewEl.textContent = '';
+        justEvaluated = true;
+      }
+    }
+    render();
+  }
+
+  document.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => press(b.dataset.key));
+  });
+
+  document.addEventListener('keydown', e => {
+    if (/^[0-9]$/.test(e.key)) press(e.key);
+    else if (e.key === '.') press('.');
+    else if (e.key === '+') press('+');
+    else if (e.key === '-') press('-');
+    else if (e.key === '*') press('×');
+    else if (e.key === '/') { e.preventDefault(); press('÷'); }
+    else if (e.key === '%') press('%');
+    else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); press('='); }
+    else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') press('AC');
+    else if (e.key === 'Backspace') { expr = expr.slice(0, -1); render(); }
+  });
+
+  render();
+</script>
+</body>
+</html>
